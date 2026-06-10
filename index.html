@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Master Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>.tab-content { display: none; } .tab-content.active { display: block; }</style>
+</head>
+<body class="bg-gray-100 font-sans flex flex-col md:flex-row min-h-screen">
+
+    <aside class="w-full md:w-64 bg-slate-950 text-white p-5 flex flex-col justify-between shadow-xl">
+        <div>
+            <h1 class="text-xl font-bold mb-6 text-indigo-400">🌐 Universal Hub</h1>
+            <nav class="space-y-2">
+                <button onclick="switchTab('hardware')" id="btn-hardware" class="tab-btn w-full text-left p-2 rounded bg-slate-800">🔌 হার্ডওয়্যার ল্যাব</button>
+                <button onclick="switchTab('child')" id="btn-child" class="tab-btn w-full text-left p-2 rounded">📱 চাইল্ড মনিটরিং</button>
+                <button onclick="switchTab('cctv')" id="btn-cctv" class="tab-btn w-full text-left p-2 rounded">📹 সিসিটিভি ক্যামেরা</button>
+                <button onclick="switchTab('router')" id="btn-router" class="tab-btn w-full text-left p-2 rounded">🌐 ওয়াইফাই রাউটার</button>
+                <button onclick="switchTab('nfc')" id="btn-nfc" class="tab-btn w-full text-left p-2 rounded">💳 এনএফসি লক</button>
+                <button onclick="switchTab('settings')" id="btn-settings" class="tab-btn w-full text-left p-2 rounded text-yellow-400 font-semibold">⚙️ সেটিংস</button>
+            </nav>
+        </div>
+        <div class="text-xs text-slate-400 pt-3 border-t border-slate-800">স্ট্যাটাস: <span id="global-status" class="text-red-500 font-bold">অফলাইন 🔴</span></div>
+    </aside>
+
+    <main class="flex-1 p-6 overflow-y-auto">
+        <div id="settings" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">⚙️ কনফিগারেশন সেটিংস</h2>
+            <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                <input type="text" id="server-url" class="w-full border p-2 rounded font-mono" placeholder="সার্ভার ইউআরএল (Render/Railway)">
+                <input type="text" id="router-ip" class="w-full border p-2 rounded font-mono" placeholder="রাউটার আইপি (e.g. 192.168.1.1)">
+                <input type="text" id="cctv-url" class="w-full border p-2 rounded font-mono" placeholder="CCTV RTSP/Stream URL">
+                <button onclick="saveSettings()" class="bg-indigo-600 text-white px-6 py-2 rounded font-medium hover:bg-indigo-700">সেভ ও কানেক্ট 💾</button>
+            </div>
+        </div>
+
+        <div id="hardware" class="tab-content active">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🔌 হার্ডওয়্যার ও জিপিএস ল্যাব</h2>
+            <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                <button onclick="connectSerial()" class="bg-indigo-600 text-white px-4 py-2 rounded font-medium">ইউএসবি ডিভাইস কানেক্ট ⚡</button>
+                <textarea id="serial-log" readonly class="w-full h-40 bg-slate-950 text-emerald-400 p-3 font-mono text-xs rounded border"></textarea>
+            </div>
+        </div>
+
+        <div id="child" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">📱 চাইল্ড মোবাইল মনিটরিং</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow text-center"><video id="remote-screen" autoplay playsinline class="w-full max-w-sm aspect-[9/16] bg-slate-950 rounded-lg mx-auto border-4 border-slate-800"></video></div>
+                <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                    <button onclick="sendChildCommand('track_location')" class="w-full bg-emerald-600 text-white p-2 rounded font-medium">📍 লোকেশন ট্র্যাক</button>
+                    <div id="child-data-logs" class="h-40 overflow-y-auto bg-slate-50 p-2 font-mono text-xs border"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="cctv" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">📹 লাইভ সিসিটিভি ক্যামেরা ফিড</h2>
+            <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                <div class="aspect-video bg-slate-950 rounded-lg overflow-hidden flex items-center justify-center">
+                    <video id="cctv-player" autoplay playsinline controls class="w-full h-full"></video>
+                </div>
+                <button onclick="connectCCTV()" class="bg-indigo-600 text-white px-6 py-2 rounded font-medium">ক্যামেরা লাইভ স্ট্রিম চালু করুন 🎥</button>
+            </div>
+        </div>
+
+        <div id="router" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🌐 ওয়াইফাই রাউটার ম্যানেজার</h2>
+            <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                <button onclick="triggerRouterAction('reboot')" class="bg-red-600 text-white px-5 py-2 rounded font-medium">রাউটার রিবুট করুন</button>
+                <div id="router-log" class="text-sm font-mono text-gray-600"></div>
+            </div>
+        </div>
+
+        <div id="nfc" class="tab-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">💳 এনএফসি লক কন্ট্রোল</h2>
+            <div class="bg-white p-6 rounded-lg shadow text-center py-12 space-y-4">
+                <button onclick="startNFCScan()" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-semibold shadow-md">NFC স্ক্যান 📡</button>
+                <div id="nfc-output" class="text-md font-mono text-indigo-600 font-bold"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let socket, port;
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-slate-800'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('bg-slate-800');
+        }
+        function saveSettings() {
+            localStorage.setItem('serverUrl', document.getElementById('server-url').value);
+            localStorage.setItem('routerIp', document.getElementById('router-ip').value);
+            localStorage.setItem('cctvUrl', document.getElementById('cctv-url').value);
+            initSocketConnection(document.getElementById('server-url').value);
+        }
+        function initSocketConnection(url) {
+            if (!url) return; if (socket) socket.disconnect();
+            socket = io(url);
+            socket.on('connect', () => {
+                document.getElementById('global-status').innerText = "অনলাইন 🟢";
+                document.getElementById('global-status').className = "text-green-500 font-bold";
+                socket.emit('join-room', 'parent');
+            });
+            socket.on('parent-receive-data', (data) => {
+                document.getElementById('child-data-logs').innerHTML += `<p>[${new Date().toLocaleTimeString()}] ${JSON.stringify(data)}</p>`;
+            });
+        }
+        async function connectSerial() {
+            if ('serial' in navigator) {
+                try {
+                    port = await navigator.serial.requestPort(); await port.open({ baudRate: 9600 });
+                    document.getElementById('serial-log').value += "🟢 হার্ডওয়্যার ডিভাইস কানেক্টেড!\n";
+                } catch (err) { alert(err.message); }
+            } else { alert('Web Serial নট সাপোর্টেড!'); }
+        }
+        async function connectCCTV() {
+            const streamUrl = localStorage.getItem('cctvUrl');
+            if(!streamUrl) { alert("প্রথমে সেটিংসে সিসিটিভি স্ট্রিম ইউআরএল দিন!"); return; }
+            document.getElementById('cctv-player').src = streamUrl; // অরিজিনাল মিডিয়া সোর্স ইনজেকশন
+        }
+        async function startNFCScan() {
+            if ('NDEFReader' in window) {
+                try {
+                    const ndef = new NDEFReader(); await ndef.scan();
+                    document.getElementById('nfc-output').innerText = "📡 ট্যাগ স্পর্শ করুন...";
+                    ndef.onreading = e => document.getElementById('nfc-output').innerText = `🔓 কার্ড আইডি: ${e.serialNumber}`;
+                } catch (err) { alert(err.message); }
+            } else { document.getElementById('nfc-output').innerText = "❌ এনএফসি নট সাপোর্টেড"; }
+        }
+        async function triggerRouterAction(action) {
+            const sUrl = localStorage.getItem('serverUrl');
+            if(!sUrl) return;
+            const res = await fetch(`${sUrl}/api/router-control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ routerIp: localStorage.getItem('routerIp'), action: action })
+            });
+            const data = await res.json();
+            document.getElementById('router-log').innerText = data.message;
+        }
+        window.onload = () => {
+            const sUrl = localStorage.getItem('serverUrl');
+            if(sUrl) {
+                document.getElementById('server-url').value = sUrl;
+                document.getElementById('router-ip').value = localStorage.getItem('routerIp') || '';
+                document.getElementById('cctv-url').value = localStorage.getItem('cctvUrl') || '';
+                initSocketConnection(sUrl);
+            }
+        };
+    </script>
+</body>
+</html>
