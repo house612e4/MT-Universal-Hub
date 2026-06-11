@@ -1,155 +1,483 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Master Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>.tab-content { display: none; } .tab-content.active { display: block; }</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Support Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f1117;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+
+.header {
+  background: #1a1d2e;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a2d3e;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 17px; color: #fff; }
+.header h1 span { color: #4f8ef7; }
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f1117;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #f44336;
+}
+.dot.online { background: #4caf50; animation: blink 1.5s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+.page { display: none; padding: 14px; max-width: 500px; margin: 0 auto; }
+.page.active { display: block; }
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #1a1d2e;
+  border-top: 1px solid #2a2d3e;
+  display: flex;
+  z-index: 100;
+}
+.nav-item {
+  flex: 1;
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: #555;
+  font-size: 11px;
+  transition: color 0.2s;
+}
+.nav-item .nicon { font-size: 20px; margin-bottom: 3px; }
+.nav-item.active { color: #4f8ef7; }
+
+.card {
+  background: #1a1d2e;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border: 1px solid #2a2d3e;
+}
+.card-title {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+input[type=text] {
+  width: 100%;
+  background: #0f1117;
+  border: 1px solid #2a2d3e;
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 10px;
+}
+input[type=text]:focus { border-color: #4f8ef7; }
+
+.btn {
+  padding: 11px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+.btn:active { opacity: 0.8; }
+.btn-blue { background: #4f8ef7; color: #fff; }
+.btn-red { background: #f44336; color: #fff; }
+.btn-gray { background: #2a2d3e; color: #aaa; }
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.info-box {
+  background: #0f1117;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.info-box .il { font-size: 11px; color: #555; margin-bottom: 5px; }
+.info-box .iv { font-size: 15px; color: #fff; font-weight: 600; }
+
+.screen-wrap {
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 9/16;
+  cursor: crosshair;
+  border: 2px solid #2a2d3e;
+  position: relative;
+  margin-bottom: 12px;
+}
+.screen-wrap.online { border-color: #4caf50; }
+.screen-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  gap: 10px;
+  font-size: 13px;
+}
+.screen-placeholder .big { font-size: 44px; }
+.ripple {
+  position: absolute;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(79,142,247,0.5);
+  transform: translate(-50%,-50%) scale(0);
+  animation: rip 0.5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes rip { to { transform: translate(-50%,-50%) scale(2.5); opacity:0; } }
+
+.nav-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.nav-btn {
+  background: #0f1117;
+  border: 1px solid #2a2d3e;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 13px;
+}
+.nav-btn:active { background: #1e2235; }
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+}
+.quick-btn {
+  background: #0f1117;
+  border: 1px solid #2a2d3e;
+  border-radius: 10px;
+  padding: 14px 6px;
+  text-align: center;
+  cursor: pointer;
+}
+.quick-btn:active { background: #1e2235; }
+.quick-btn .qi { font-size: 20px; margin-bottom: 5px; }
+.quick-btn .ql { font-size: 11px; color: #666; }
+
+.log-box {
+  background: #0f1117;
+  border-radius: 8px;
+  padding: 10px;
+  height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: monospace;
+}
+.ll { margin-bottom: 3px; color: #555; }
+.ll.s { color: #4caf50; }
+.ll.e { color: #f44336; }
+.ll.i { color: #4f8ef7; }
+
+.toast {
+  position: fixed;
+  bottom: 70px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: #1a1d2e;
+  border: 1px solid #2a2d3e;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  transition: transform 0.3s;
+  z-index: 999;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.pb { padding-bottom: 70px; }
+</style>
 </head>
-<body class="bg-gray-100 font-sans flex flex-col md:flex-row min-h-screen">
+<body>
 
-    <aside class="w-full md:w-64 bg-slate-950 text-white p-5 flex flex-col justify-between shadow-xl">
-        <div>
-            <h1 class="text-xl font-bold mb-6 text-indigo-400">🌐 Universal Hub</h1>
-            <nav class="space-y-2">
-                <button onclick="switchTab('hardware')" id="btn-hardware" class="tab-btn w-full text-left p-2 rounded bg-slate-800">🔌 হার্ডওয়্যার ল্যাব</button>
-                <button onclick="switchTab('child')" id="btn-child" class="tab-btn w-full text-left p-2 rounded">📱 চাইল্ড মনিটরিং</button>
-                <button onclick="switchTab('cctv')" id="btn-cctv" class="tab-btn w-full text-left p-2 rounded">📹 সিসিটিভি ক্যামেরা</button>
-                <button onclick="switchTab('router')" id="btn-router" class="tab-btn w-full text-left p-2 rounded">🌐 ওয়াইফাই রাউটার</button>
-                <button onclick="switchTab('nfc')" id="btn-nfc" class="tab-btn w-full text-left p-2 rounded">💳 এনএফসি লক</button>
-                <button onclick="switchTab('settings')" id="btn-settings" class="tab-btn w-full text-left p-2 rounded text-yellow-400 font-semibold">⚙️ সেটিংস</button>
-            </nav>
-        </div>
-        <div class="text-xs text-slate-400 pt-3 border-t border-slate-800">স্ট্যাটাস: <span id="global-status" class="text-red-500 font-bold">অফলাইন 🔴</span></div>
-    </aside>
+<div class="header">
+  <h1>👨‍👩‍👧 <span>Family</span> Support</h1>
+  <div class="status-pill">
+    <div class="dot" id="dot"></div>
+    <span id="statusTxt">অফলাইন</span>
+  </div>
+</div>
 
-    <main class="flex-1 p-6 overflow-y-auto">
-        <div id="settings" class="tab-content">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">⚙️ কনফিগারেশন সেটিংস</h2>
-            <div class="bg-white p-6 rounded-lg shadow space-y-4">
-                <input type="text" id="server-url" class="w-full border p-2 rounded font-mono" placeholder="সার্ভার ইউআরএল (Render/Railway)">
-                <input type="text" id="router-ip" class="w-full border p-2 rounded font-mono" placeholder="রাউটার আইপি (e.g. 192.168.1.1)">
-                <input type="text" id="cctv-url" class="w-full border p-2 rounded font-mono" placeholder="CCTV RTSP/Stream URL">
-                <button onclick="saveSettings()" class="bg-indigo-600 text-white px-6 py-2 rounded font-medium hover:bg-indigo-700">সেভ ও কানেক্ট 💾</button>
-            </div>
-        </div>
+<!-- সংযোগ পেজ -->
+<div class="page active pb" id="page-connect">
+  <div style="height:14px"></div>
+  <div class="card">
+    <div class="card-title">🔗 সার্ভার সংযোগ</div>
+    <input type="text" id="serverUrl" value="https://mt-universal-hub.onrender.com">
+    <button class="btn btn-blue" id="connectBtn" onclick="toggleConnect()">সংযুক্ত হন</button>
+  </div>
 
-        <div id="hardware" class="tab-content active">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">🔌 হার্ডওয়্যার ও জিপিএস ল্যাব</h2>
-            <div class="bg-white p-6 rounded-lg shadow space-y-4">
-                <button onclick="connectSerial()" class="bg-indigo-600 text-white px-4 py-2 rounded font-medium">ইউএসবি ডিভাইস কানেক্ট ⚡</button>
-                <textarea id="serial-log" readonly class="w-full h-40 bg-slate-950 text-emerald-400 p-3 font-mono text-xs rounded border"></textarea>
-            </div>
-        </div>
+  <div class="card">
+    <div class="card-title">📊 তথ্য</div>
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="il">স্ট্যাটাস</div>
+        <div class="iv" id="devStatus">—</div>
+      </div>
+      <div class="info-box">
+        <div class="il">সময়</div>
+        <div class="iv" id="connTime">—</div>
+      </div>
+      <div class="info-box">
+        <div class="il">ক্লিক পাঠানো</div>
+        <div class="iv" id="clickCnt">0</div>
+      </div>
+      <div class="info-box">
+        <div class="il">সেশন</div>
+        <div class="iv" id="sessId">—</div>
+      </div>
+    </div>
+  </div>
 
-        <div id="child" class="tab-content">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">📱 চাইল্ড মোবাইল মনিটরিং</h2>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow text-center"><video id="remote-screen" autoplay playsinline class="w-full max-w-sm aspect-[9/16] bg-slate-950 rounded-lg mx-auto border-4 border-slate-800"></video></div>
-                <div class="bg-white p-6 rounded-lg shadow space-y-4">
-                    <button onclick="sendChildCommand('track_location')" class="w-full bg-emerald-600 text-white p-2 rounded font-medium">📍 লোকেশন ট্র্যাক</button>
-                    <div id="child-data-logs" class="h-40 overflow-y-auto bg-slate-50 p-2 font-mono text-xs border"></div>
-                </div>
-            </div>
-        </div>
+  <div class="card">
+    <div class="card-title">ℹ️ ব্যবহার পদ্ধতি</div>
+    <div style="font-size:13px; color:#777; line-height:2;">
+      ১. উপরের বাটন চেপে সার্ভারে সংযুক্ত হন<br>
+      ২. পরিবারের ফোনে FamilySupport app খুলুন<br>
+      ৩. Accessibility Service চালু করুন<br>
+      ৪. "কন্ট্রোল" পেজে গিয়ে স্ক্রিনে ট্যাপ করুন
+    </div>
+  </div>
+</div>
 
-        <div id="cctv" class="tab-content">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">📹 লাইভ সিসিটিভি ক্যামেরা ফিড</h2>
-            <div class="bg-white p-6 rounded-lg shadow space-y-4">
-                <div class="aspect-video bg-slate-950 rounded-lg overflow-hidden flex items-center justify-center">
-                    <video id="cctv-player" autoplay playsinline controls class="w-full h-full"></video>
-                </div>
-                <button onclick="connectCCTV()" class="bg-indigo-600 text-white px-6 py-2 rounded font-medium">ক্যামেরা লাইভ স্ট্রিম চালু করুন 🎥</button>
-            </div>
-        </div>
+<!-- কন্ট্রোল পেজ -->
+<div class="page pb" id="page-control">
+  <div style="height:14px"></div>
 
-        <div id="router" class="tab-content">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">🌐 ওয়াইফাই রাউটার ম্যানেজার</h2>
-            <div class="bg-white p-6 rounded-lg shadow space-y-4">
-                <button onclick="triggerRouterAction('reboot')" class="bg-red-600 text-white px-5 py-2 rounded font-medium">রাউটার রিবুট করুন</button>
-                <div id="router-log" class="text-sm font-mono text-gray-600"></div>
-            </div>
-        </div>
+  <div class="screen-wrap" id="screenWrap" onclick="handleClick(event)">
+    <div class="screen-placeholder" id="placeholder">
+      <div class="big">📵</div>
+      <div>সংযুক্ত হলে এখানে ট্যাপ করুন</div>
+    </div>
+  </div>
 
-        <div id="nfc" class="tab-content">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">💳 এনএফসি লক কন্ট্রোল</h2>
-            <div class="bg-white p-6 rounded-lg shadow text-center py-12 space-y-4">
-                <button onclick="startNFCScan()" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-semibold shadow-md">NFC স্ক্যান 📡</button>
-                <div id="nfc-output" class="text-md font-mono text-indigo-600 font-bold"></div>
-            </div>
-        </div>
-    </main>
+  <div class="nav-btns">
+    <div class="nav-btn" onclick="sendClick(0.15,0.97)">◀ ব্যাক</div>
+    <div class="nav-btn" onclick="sendClick(0.5,0.97)">⊙ হোম</div>
+    <div class="nav-btn" onclick="sendClick(0.85,0.97)">▣ সাম্প্রতিক</div>
+  </div>
 
-    <script>
-        let socket, port;
-        function switchTab(id) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-slate-800'));
-            document.getElementById(id).classList.add('active');
-            document.getElementById('btn-' + id).classList.add('bg-slate-800');
-        }
-        function saveSettings() {
-            localStorage.setItem('serverUrl', document.getElementById('server-url').value);
-            localStorage.setItem('routerIp', document.getElementById('router-ip').value);
-            localStorage.setItem('cctvUrl', document.getElementById('cctv-url').value);
-            initSocketConnection(document.getElementById('server-url').value);
-        }
-        function initSocketConnection(url) {
-            if (!url) return; if (socket) socket.disconnect();
-            socket = io(url);
-            socket.on('connect', () => {
-                document.getElementById('global-status').innerText = "অনলাইন 🟢";
-                document.getElementById('global-status').className = "text-green-500 font-bold";
-                socket.emit('join-room', 'parent');
-            });
-            socket.on('parent-receive-data', (data) => {
-                document.getElementById('child-data-logs').innerHTML += `<p>[${new Date().toLocaleTimeString()}] ${JSON.stringify(data)}</p>`;
-            });
-        }
-        async function connectSerial() {
-            if ('serial' in navigator) {
-                try {
-                    port = await navigator.serial.requestPort(); await port.open({ baudRate: 9600 });
-                    document.getElementById('serial-log').value += "🟢 হার্ডওয়্যার ডিভাইস কানেক্টেড!\n";
-                } catch (err) { alert(err.message); }
-            } else { alert('Web Serial নট সাপোর্টেড!'); }
-        }
-        async function connectCCTV() {
-            const streamUrl = localStorage.getItem('cctvUrl');
-            if(!streamUrl) { alert("প্রথমে সেটিংসে সিসিটিভি স্ট্রিম ইউআরএল দিন!"); return; }
-            document.getElementById('cctv-player').src = streamUrl; // অরিজিনাল মিডিয়া সোর্স ইনজেকশন
-        }
-        async function startNFCScan() {
-            if ('NDEFReader' in window) {
-                try {
-                    const ndef = new NDEFReader(); await ndef.scan();
-                    document.getElementById('nfc-output').innerText = "📡 ট্যাগ স্পর্শ করুন...";
-                    ndef.onreading = e => document.getElementById('nfc-output').innerText = `🔓 কার্ড আইডি: ${e.serialNumber}`;
-                } catch (err) { alert(err.message); }
-            } else { document.getElementById('nfc-output').innerText = "❌ এনএফসি নট সাপোর্টেড"; }
-        }
-        async function triggerRouterAction(action) {
-            const sUrl = localStorage.getItem('serverUrl');
-            if(!sUrl) return;
-            const res = await fetch(`${sUrl}/api/router-control`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ routerIp: localStorage.getItem('routerIp'), action: action })
-            });
-            const data = await res.json();
-            document.getElementById('router-log').innerText = data.message;
-        }
-        window.onload = () => {
-            const sUrl = localStorage.getItem('serverUrl');
-            if(sUrl) {
-                document.getElementById('server-url').value = sUrl;
-                document.getElementById('router-ip').value = localStorage.getItem('routerIp') || '';
-                document.getElementById('cctv-url').value = localStorage.getItem('cctvUrl') || '';
-                initSocketConnection(sUrl);
-            }
-        };
-    </script>
+  <div class="card">
+    <div class="card-title">⚡ দ্রুত ট্যাপ</div>
+    <div class="quick-grid">
+      <div class="quick-btn" onclick="sendClick(0.5,0.3)">
+        <div class="qi">⬆️</div><div class="ql">উপরে</div>
+      </div>
+      <div class="quick-btn" onclick="sendClick(0.5,0.5)">
+        <div class="qi">🎯</div><div class="ql">মাঝখানে</div>
+      </div>
+      <div class="quick-btn" onclick="sendClick(0.5,0.7)">
+        <div class="qi">⬇️</div><div class="ql">নিচে</div>
+      </div>
+      <div class="quick-btn" onclick="sendClick(0.1,0.5)">
+        <div class="qi">⬅️</div><div class="ql">বাম</div>
+      </div>
+      <div class="quick-btn" onclick="sendClick(0.9,0.5)">
+        <div class="qi">➡️</div><div class="ql">ডান</div>
+      </div>
+      <div class="quick-btn" onclick="sendClick(0.5,0.05)">
+        <div class="qi">🔔</div><div class="ql">নোটিফিকেশন</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- লগ পেজ -->
+<div class="page pb" id="page-log">
+  <div style="height:14px"></div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title" style="margin:0">📋 লগ</div>
+      <button class="btn btn-gray" style="width:auto;padding:6px 12px;font-size:12px" onclick="clearLog()">পরিষ্কার</button>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="nav-connect" onclick="showPage('connect')">
+    <div class="nicon">🔗</div>সংযোগ
+  </button>
+  <button class="nav-item" id="nav-control" onclick="showPage('control')">
+    <div class="nicon">🖥️</div>কন্ট্রোল
+  </button>
+  <button class="nav-item" id="nav-log" onclick="showPage('log')">
+    <div class="nicon">📋</div>লগ
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let socket = null;
+let connected = false;
+let clicks = 0;
+let timerInt = null;
+let startTime = null;
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+function log(msg, type='i') {
+  const box = document.getElementById('logBox');
+  const t = new Date().toLocaleTimeString('bn-BD');
+  const d = document.createElement('div');
+  d.className = 'll ' + type;
+  d.textContent = `[${t}] ${msg}`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+function clearLog() { document.getElementById('logBox').innerHTML = ''; }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function setOnline(on) {
+  connected = on;
+  document.getElementById('dot').className = 'dot' + (on ? ' online' : '');
+  document.getElementById('statusTxt').textContent = on ? 'অনলাইন' : 'অফলাইন';
+  document.getElementById('devStatus').textContent = on ? '✅ সক্রিয়' : '❌ নেই';
+  document.getElementById('screenWrap').className = 'screen-wrap' + (on ? ' online' : '');
+  document.getElementById('placeholder').style.display = on ? 'none' : 'flex';
+}
+
+function startTimer() {
+  startTime = Date.now();
+  timerInt = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(s/60).toString().padStart(2,'0');
+    const sc = (s%60).toString().padStart(2,'0');
+    document.getElementById('connTime').textContent = m+':'+sc;
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInt);
+  document.getElementById('connTime').textContent = '—';
+}
+
+function toggleConnect() {
+  connected ? disconnect() : connect();
+}
+
+function connect() {
+  const url = document.getElementById('serverUrl').value.trim();
+  if (!url) { toast('❌ URL দিন'); return; }
+  log('সংযোগ করার চেষ্টা...', 'i');
+
+  socket = io(url, {
+    auth: { token: 'MT_STUDIO_2026' },
+    transports: ['websocket','polling']
+  });
+
+  socket.on('connect', () => {
+    setOnline(true);
+    startTimer();
+    document.getElementById('sessId').textContent = socket.id.substring(0,6);
+    document.getElementById('connectBtn').textContent = 'বিচ্ছিন্ন করুন';
+    document.getElementById('connectBtn').className = 'btn btn-red';
+    log('✅ সার্ভারে সংযুক্ত হয়েছে', 's');
+    toast('✅ সংযুক্ত হয়েছে');
+  });
+
+  socket.on('disconnect', () => {
+    setOnline(false);
+    stopTimer();
+    document.getElementById('connectBtn').textContent = 'সংযুক্ত হন';
+    document.getElementById('connectBtn').className = 'btn btn-blue';
+    document.getElementById('sessId').textContent = '—';
+    log('❌ সংযোগ বিচ্ছিন্ন', 'e');
+  });
+
+  socket.on('connect_error', err => {
+    log('⚠️ ত্রুটি: ' + err.message, 'e');
+    toast('⚠️ সংযোগ ব্যর্থ');
+  });
+}
+
+function disconnect() {
+  if (socket) { socket.disconnect(); socket = null; }
+  setOnline(false);
+  stopTimer();
+  document.getElementById('connectBtn').textContent = 'সংযুক্ত হন';
+  document.getElementById('connectBtn').className = 'btn btn-blue';
+}
+
+function sendClick(x, y) {
+  if (!connected || !socket) {
+    toast('⚠️ আগে সংযুক্ত হন');
+    showPage('connect');
+    return;
+  }
+  // APK এর event name অনুযায়ী: child-execute-command
+  socket.emit('child-execute-command', { action: 'click', x, y });
+  clicks++;
+  document.getElementById('clickCnt').textContent = clicks;
+  log(`👆 ক্লিক পাঠানো → x:${x.toFixed(2)}, y:${y.toFixed(2)}`, 's');
+}
+
+function handleClick(e) {
+  const wrap = document.getElementById('screenWrap');
+  const rect = wrap.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.left = (x*100)+'%';
+  r.style.top = (y*100)+'%';
+  wrap.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+
+  sendClick(x, y);
+}
+</script>
 </body>
 </html>
